@@ -282,7 +282,8 @@ if options.mode in ["train", "refresh"]:
                     os.symlink(modelfname, "tmp.link")
                     os.rename("tmp.link", MODELSYMLINK)
                 sys.stderr.write("\n")
-        adam.update_epoch(1.0)
+        #adam.update_epoch(1.0)
+        adam.learning_rate /= (1 - 1.0)
 
 elif options.mode == "test":
     model.populate(options.modelfile)
