@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from evaluation import *
 from discreteargidfeats import *
-from dynet import *
+#from dynet import *
+import dynet
 from arksemaforeval import *
 from optparse import OptionParser
 
@@ -11,7 +12,7 @@ import time
 import math
 
 MODELSYMLINK = "model.segrnn-argid." + VERSION
-modelfname = "tmp/" + VERSION + "model.sra-" + str(time.time())
+modelfname = "../models/" + VERSION + "model.sra-" + str(time.time())
 
 optpr = OptionParser()
 optpr.add_option("--testf", dest="test_conll", help="Annotated CoNLL test file", metavar="FILE", default=TEST_CONLL)
@@ -191,8 +192,8 @@ if USE_CONSTITS:
     ALL_FEATS_DIM += 1 + PHRASEDIM  # is a constit and what is it
     ALL_FEATS_DIM += PATHDIM
 
-model = Model()
-adam = AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8)
+model = dynet.Model()
+adam = dynet.AdamTrainer(model, 0.0005, 0.01, 0.9999, 1e-8)
 
 v_x = model.add_lookup_parameters((VOCDICT.size(), TOKDIM))
 p_x = model.add_lookup_parameters((POSDICT.size(), POSDIM))
@@ -223,31 +224,31 @@ w_i = model.add_parameters((LSTMINPDIM, INPDIM))
 b_i = model.add_parameters((LSTMINPDIM, 1))
 
 builders = [
-    LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model),
-    LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model),
+    dynet.LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model),
+    dynet.LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model),
 ]
 
-basefwdlstm = LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMINPDIM, model)
-baserevlstm = LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMINPDIM, model)
+basefwdlstm = dynet.LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMINPDIM, model)
+baserevlstm = dynet.LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMINPDIM, model)
 
 w_bi = model.add_parameters((LSTMINPDIM, 2 * LSTMINPDIM))
 b_bi = model.add_parameters((LSTMINPDIM, 1))
 
-tgtlstm = LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model)
-ctxtlstm = LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model)
+tgtlstm = dynet.LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model)
+ctxtlstm = dynet.LSTMBuilder(LSTMDEPTH, LSTMINPDIM, LSTMDIM, model)
 
 if USE_DEPS:
     w_di = model.add_parameters((LSTMINPDIM, LSTMINPDIM + DEPHEADDIM + DEPRELDIM))
     b_di = model.add_parameters((LSTMINPDIM, 1))
 
-    pathfwdlstm = LSTMBuilder(LSTMDEPTH, LSTMINPDIM, PATHLSTMDIM, model)
-    pathrevlstm = LSTMBuilder(LSTMDEPTH, LSTMINPDIM, PATHLSTMDIM, model)
+    pathfwdlstm = dynet.LSTMBuilder(LSTMDEPTH, LSTMINPDIM, PATHLSTMDIM, model)
+    pathrevlstm = dynet.LSTMBuilder(LSTMDEPTH, LSTMINPDIM, PATHLSTMDIM, model)
 
     w_p = model.add_parameters((PATHDIM, 2 * PATHLSTMDIM))
     b_p = model.add_parameters((PATHDIM, 1))
 elif USE_CONSTITS:
-    cpathfwdlstm = LSTMBuilder(LSTMDEPTH, PHRASEDIM, PATHLSTMDIM, model)
-    cpathrevlstm = LSTMBuilder(LSTMDEPTH, PHRASEDIM, PATHLSTMDIM, model)
+    cpathfwdlstm = dynet.LSTMBuilder(LSTMDEPTH, PHRASEDIM, PATHLSTMDIM, model)
+    cpathrevlstm = dynet.LSTMBuilder(LSTMDEPTH, PHRASEDIM, PATHLSTMDIM, model)
 
     w_cp = model.add_parameters((PATHDIM, 2 * PATHLSTMDIM))
     b_cp = model.add_parameters((PATHDIM, 1))
@@ -267,34 +268,34 @@ if USE_PTB_CONSTITS:
 
 
 def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
-    pw_i = parameter(w_i)
-    pb_i = parameter(b_i)
+    pw_i = dynet.parameter(w_i)
+    pb_i = dynet.parameter(b_i)
 
-    pw_bi = parameter(w_bi)
-    pb_bi = parameter(b_bi)
+    pw_bi = dynet.parameter(w_bi)
+    pb_bi = dynet.parameter(b_bi)
 
     sentlen = len(unkdtokens)
     # tfkeys = sorted(tfdict)
     # tg_start = tfkeys[0]
 
     if trainmode:
-        emb_x = [noise(v_x[tok], 0.1) for tok in unkdtokens]
+        emb_x = [dynet.noise(v_x[tok], 0.1) for tok in unkdtokens]
     else:
         emb_x = [v_x[tok] for tok in unkdtokens]
     pos_x = [p_x[pos] for pos in sentence.postags]
-    dist_x = [scalarInput(abs(i - tg_start) + 1) for i in xrange(sentlen)]
+    dist_x = [dynet.scalarInput(abs(i - tg_start) + 1) for i in xrange(sentlen)]
 
-    baseinp_x = [(pw_i * concatenate([emb_x[j], pos_x[j], dist_x[j]]) + pb_i) for j in xrange(sentlen)]
+    baseinp_x = [(pw_i * dynet.concatenate([emb_x[j], pos_x[j], dist_x[j]]) + pb_i) for j in xrange(sentlen)]
 
     if USE_WV:
-        pw_e = parameter(w_e)
-        pb_e = parameter(b_e)
+        pw_e = dynet.parameter(w_e)
+        pb_e = dynet.parameter(b_e)
         for j in xrange(sentlen):
             if unkdtokens[j] in wvs:
-                nonupdatedwv = nobackprop(e_x[unkdtokens[j]])
+                nonupdatedwv = dynet.nobackprop(e_x[unkdtokens[j]])
                 baseinp_x[j] = baseinp_x[j] + pw_e * nonupdatedwv + pb_e
 
-    embposdist_x = [rectify(baseinp_x[j]) for j in xrange(sentlen)]
+    embposdist_x = [dynet.rectify(baseinp_x[j]) for j in xrange(sentlen)]
 
     if USE_DROPOUT:
         basefwdlstm.set_dropout(DROPOUT_RATE)
@@ -303,17 +304,17 @@ def get_base_embeddings(trainmode, unkdtokens, tg_start, sentence):
     basefwd = bfinit.transduce(embposdist_x)
     brinit = baserevlstm.initial_state()
     baserev = brinit.transduce(reversed(embposdist_x))
-    basebi_x = [rectify(pw_bi * concatenate([basefwd[eidx], baserev[sentlen - eidx - 1]]) + pb_bi) for eidx in
+    basebi_x = [dynet.rectify(pw_bi * dynet.concatenate([basefwd[eidx], baserev[sentlen - eidx - 1]]) + pb_bi) for eidx in
                 xrange(sentlen)]
 
     if USE_DEPS:
-        pw_di = parameter(w_di)
-        pb_di = parameter(b_di)
+        pw_di = dynet.parameter(w_di)
+        pb_di = dynet.parameter(b_di)
 
         dhead_x = [embposdist_x[dephead] for dephead in sentence.depheads]
         dheadp_x = [pos_x[dephead] for dephead in sentence.depheads]
         drel_x = [dr_x[deprel] for deprel in sentence.deprels]
-        baseinp_x = [rectify(pw_di * concatenate([dhead_x[j], dheadp_x[j], drel_x[j], basebi_x[j]]) + pb_di) for j in
+        baseinp_x = [dynet.rectify(pw_di * dynet.concatenate([dhead_x[j], dheadp_x[j], drel_x[j], basebi_x[j]]) + pb_di) for j in
                      xrange(sentlen)]
         basebi_x = baseinp_x
 
@@ -342,10 +343,10 @@ def get_target_frame_embeddings(embposdist_x, tfdict):
     lp_v = lp_x[lu.posid]
 
     if USE_HIER and frame.id in frmrelmap:
-        frame_v = esum([frm_x[frame.id]] + [frm_x[par] for par in frmrelmap[frame.id]])
+        frame_v = dynet.esum([frm_x[frame.id]] + [frm_x[par] for par in frmrelmap[frame.id]])
     else:
         frame_v = frm_x[frame.id]
-    tfemb = concatenate([lu_v, lp_v, frame_v, target_x, ctxt_x])
+    tfemb = dynet.concatenate([lu_v, lp_v, frame_v, target_x, ctxt_x])
 
     return tfemb, frame
 
@@ -395,9 +396,9 @@ def get_deppath_embeddings(sentence, embpos_x):
         prinit = pathrevlstm.initial_state()
         pathrev = prinit.transduce(reversed(shp))
 
-        pw_p = parameter(w_p)
-        pb_p = parameter(b_p)
-        pathlstm = rectify(pw_p * concatenate([pathfwd[-1], pathrev[-1]]) + pb_p)
+        pw_p = dynet.parameter(w_p)
+        pb_p = dynet.parameter(b_p)
+        pathlstm = dynet.rectify(pw_p * dynet.concatenate([pathfwd[-1], pathrev[-1]]) + pb_p)
 
         spaths[spath] = pathlstm
     return spaths
@@ -415,19 +416,19 @@ def get_cpath_embeddings(sentence):
         cprinit = cpathrevlstm.initial_state()
         cpathrev = cprinit.transduce(reversed(shp))
 
-        pw_cp = parameter(w_cp)
-        pb_cp = parameter(b_cp)
-        cpathlstm = rectify(pw_cp * concatenate([cpathfwd[-1], cpathrev[-1]]) + pb_cp)
+        pw_cp = dynet.parameter(w_cp)
+        pb_cp = dynet.parameter(b_cp)
+        cpathlstm = dynet.rectify(pw_cp * dynet.concatenate([cpathfwd[-1], cpathrev[-1]]) + pb_cp)
 
         phrpaths[phrpath] = cpathlstm
     return phrpaths
 
 
 def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_x=None, cpaths_x=None):
-    pw_z = parameter(w_z)
-    pb_z = parameter(b_z)
-    pw_f = parameter(w_f)
-    pb_f = parameter(b_f)
+    pw_z = dynet.parameter(w_z)
+    pb_z = dynet.parameter(b_z)
+    pw_f = dynet.parameter(w_f)
+    pb_f = dynet.parameter(b_f)
 
     factexprs = {}
     sentlen = len(fws)
@@ -440,33 +441,33 @@ def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN)
         for i in xrange(istart, j + 1):
 
-            spanlen = scalarInput(j - i + 1)
-            logspanlen = scalarInput(math.log(j - i + 1))
+            spanlen = dynet.scalarInput(j - i + 1)
+            logspanlen = dynet.scalarInput(math.log(j - i + 1))
             spanwidth = sp_x[SpanWidth.howlongisspan(i, j)]
             spanpos = ap_x[ArgPosition.whereisarg((i, j), targetspan)]
 
-            fbemb_ij_basic = concatenate([fws[i][j], bws[i][j], tfemb, spanlen, logspanlen, spanwidth, spanpos])
+            fbemb_ij_basic = dynet.concatenate([fws[i][j], bws[i][j], tfemb, spanlen, logspanlen, spanwidth, spanpos])
             if USE_DEPS:
                 outs = oh_s[OutHeads.getnumouts(i, j, sentence.outheads)]
                 shp = spaths_x[sentence.shortest_paths[(i, j, targetspan[0])]]
-                fbemb_ij = concatenate([fbemb_ij_basic, outs, shp])
+                fbemb_ij = dynet.concatenate([fbemb_ij_basic, outs, shp])
             elif USE_CONSTITS:
-                isconstit = scalarInput((i, j) in sentence.constitspans)
+                isconstit = dynet.scalarInput((i, j) in sentence.constitspans)
                 lca = ct_x[sentence.lca[(i, j)][1]]
                 phrp = cpaths_x[sentence.cpaths[(i, j, targetspan[0])]]
-                fbemb_ij = concatenate([fbemb_ij_basic, isconstit, lca, phrp])
+                fbemb_ij = dynet.concatenate([fbemb_ij_basic, isconstit, lca, phrp])
             else:
                 fbemb_ij = fbemb_ij_basic
 
             for y in valid_fes:
                 fctr = Factor(i, j, y)
                 if USE_HIER and y in feparents:
-                    fefixed = esum([fe_x[y]] + [fe_x[par] for par in feparents[y]])
+                    fefixed = dynet.esum([fe_x[y]] + [fe_x[par] for par in feparents[y]])
                 else:
                     fefixed = fe_x[y]
                 # fefixed = nobackprop(fe_x[y])
-                fbemb_ijy = concatenate([fefixed, fbemb_ij])
-                factexprs[fctr] = pw_f * rectify(pw_z * fbemb_ijy + pb_z) + pb_f
+                fbemb_ijy = dynet.concatenate([fefixed, fbemb_ij])
+                factexprs[fctr] = pw_f * dynet.rectify(pw_z * fbemb_ijy + pb_z) + pb_f
                 # if USE_DROPOUT:
                 #     factexprs[fctr] = dropout(factexprs[fctr], DROPOUT_RATE)
     return factexprs
@@ -482,8 +483,8 @@ def denominator_check(n, k):
 def hamming_cost(factor, goldfactors):
     # print "hamming-cost"
     if factor in goldfactors:
-        return scalarInput(0)
-    return scalarInput(1)
+        return dynet.scalarInput(0)
+    return dynet.scalarInput(1)
 
 
 def recall_oriented_cost(factor, goldfactors):
@@ -491,7 +492,7 @@ def recall_oriented_cost(factor, goldfactors):
     beta = 1
 
     if factor in goldfactors:
-        return scalarInput(0)
+        return dynet.scalarInput(0)
     i = factor.begin
     j = factor.end
     alphabetacost = 0
@@ -502,7 +503,7 @@ def recall_oriented_cost(factor, goldfactors):
         if i <= gf.begin <= j and gf.label != NOTANFEID:
             alphabetacost += alpha
 
-    return scalarInput(alphabetacost)
+    return dynet.scalarInput(alphabetacost)
 
 
 def cost(factor, goldfactors):
@@ -532,7 +533,7 @@ def get_logloss_partition(factorexprs, valid_fes, sentlen):
 
         if not USE_SPAN_CLIP and len(spanscores) != len(valid_fes) * (j + 1):
             raise Exception("counting errors")
-        logalpha[j] = logsumexp(spanscores)
+        logalpha[j] = dynet.logsumexp(spanscores)
 
     return logalpha[sentlen - 1]
 
@@ -557,7 +558,7 @@ def get_softmax_margin_partition(factorexprs, goldfactors, valid_fes, sentlen):
 
         if not USE_SPAN_CLIP and len(spanscores) != len(valid_fes) * (j + 1):
             raise Exception("counting errors")
-        logalpha[j] = logsumexp(spanscores)
+        logalpha[j] = dynet.logsumexp(spanscores)
 
     return logalpha[sentlen - 1]
 
@@ -606,7 +607,7 @@ def get_hinge_partition(factorexprs, goldfacs, valid_fes, sentlen):
 def get_hinge_loss(factorexprs, gold_fes, valid_fes, sentlen):
     goldfactors = [Factor(span[0], span[1], feid) for feid in gold_fes for span in gold_fes[feid]]
     numeratorexprs = [factorexprs[gf] for gf in goldfactors]
-    numerator = esum(numeratorexprs)
+    numerator = dynet.esum(numeratorexprs)
 
     denominator, predfactors = get_hinge_partition(factorexprs, goldfactors, valid_fes, sentlen)
 
@@ -629,10 +630,10 @@ def get_constit_loss(fws, bws, goldspans):
     if len(goldspans) == 0:
         return None, 0
 
-    pw_fb = parameter(w_fb)
-    pb_fb = parameter(b_fb)
-    pw_c = parameter(w_c)
-    pb_c = parameter(b_c)
+    pw_fb = dynet.parameter(w_fb)
+    pb_fb = dynet.parameter(b_fb)
+    pw_c = dynet.parameter(w_c)
+    pb_c = dynet.parameter(b_c)
 
     losses = []
     sentlen = len(fws)
@@ -641,13 +642,13 @@ def get_constit_loss(fws, bws, goldspans):
         istart = 0
         if USE_SPAN_CLIP and j > ALLOWED_SPANLEN: istart = max(0, j - ALLOWED_SPANLEN)
         for i in xrange(istart, j + 1):
-            constit_ij = pw_c * rectify(pw_fb * concatenate([fws[i][j], bws[i][j]]) + pb_fb) + pb_c
+            constit_ij = pw_c * dynet.rectify(pw_fb * dynet.concatenate([fws[i][j], bws[i][j]]) + pb_fb) + pb_c
             logloss = log_softmax(constit_ij)
 
             isconstit = int((i, j) in goldspans)
             losses.append(pick(logloss, isconstit))
 
-    ptbconstitloss = scalarInput(DELTA) * -esum(losses)
+    ptbconstitloss = dynet.scalarInput(DELTA) * -dynet.esum(losses)
     numspanstagged = len(losses)
     return ptbconstitloss, numspanstagged
 
@@ -658,7 +659,7 @@ def get_loss(factorexprs, gold_fes, valid_fes, sentlen):
 
     goldfactors = [Factor(span[0], span[1], feid) for feid in gold_fes for span in gold_fes[feid]]
     numeratorexprs = [factorexprs[gf] for gf in goldfactors]
-    numerator = esum(numeratorexprs)
+    numerator = dynet.esum(numeratorexprs)
 
     if options.loss == 'log':
         partition = get_logloss_partition(factorexprs, valid_fes, sentlen)
@@ -779,7 +780,7 @@ def decode(factexprscalars, sentlen, valid_fes):
 
 
 def identify_fes(unkdtoks, sentence, tfdict, goldfes=None, testidx=None):
-    renew_cg()
+    dynet.renew_cg()
     trainmode = (goldfes is not None)
 
     global USE_DROPOUT
@@ -837,7 +838,7 @@ def identify_fes(unkdtoks, sentence, tfdict, goldfes=None, testidx=None):
 
 
 def identify_spans(unkdtoks, sentence, goldspans):
-    renew_cg()
+    dynet.renew_cg()
 
     embpos_x = get_base_embeddings(True, unkdtoks, 0, sentence)
     fws, bws = get_span_embeddings(embpos_x)
@@ -921,7 +922,8 @@ if options.mode in ['train', 'refresh']:
             if trexloss is not None:
                 loss += trexloss.scalar_value()
                 trexloss.backward()
-                adam.update(1.0)
+                #adam.update(1.0)
+                adam.update()
 
             if (idx - 1) % DEV_EVAL_EPOCHS == 0 and idx > 1:
                 devstarttime = time.time()
