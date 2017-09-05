@@ -106,7 +106,13 @@ def writeconllish(sents, frames, tfdict1, sent1):
                 outf.write("\n")
         outf.close()
 
-s = read_sents(sys.argv[1])
-f, t1, s1 = readfefile(sys.argv[2])
-# writeconllish(s,f,t1,s1)
-join_dipfe_testconll(sys.argv[3], f, t1, s1, "dip.predictedframes.conll")
+#s = read_sents(sys.argv[1])
+#f, t1, s1 = readfefile(sys.argv[2])
+#writeconllish(s,f,t1,s1)
+#join_dipfe_testconll(sys.argv[3], f, t1, s1, "dip.predictedframes.conll")
+
+if __name__ == '__main__':
+    #s = read_sents(sys.argv[1])
+    f, t1, s1 = readfefile(sys.argv[2])
+    #writeconllish(s,f,t1,s1)
+    join_dipfe_testconll(sys.argv[1], f, t1, s1, "dip.predictedframes.conll")

@@ -7,8 +7,8 @@ import os.path
 import codecs
 import xml.etree.ElementTree as et
 import sys
-reload(sys)
 sys.setdefaultencoding('utf-8')
+reload(sys)
 
 from globalconfig import *
 from xmlannotations import *
