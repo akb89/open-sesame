@@ -31,8 +31,8 @@ To use pretrained GloVe word embeddings, download the [GloVe files](https://nlp.
 ```python
 python preprocess.py glove.6B.100d.txt 2> err
 
-``` 
-creates glove.6B.100d.framevocab.txt under data/. 
+```
+creates glove.6B.100d.framevocab.txt under data/.
 
 ### Frame Identification
 To run the biLSTM frame identification module, execute:
@@ -41,8 +41,6 @@ To run the biLSTM frame identification module, execute:
 cd src/
 python frameid.py \
   --mode test \
-
-
 ```
 
 
@@ -53,10 +51,8 @@ To run the vanilla SegRNN model, use
 ```python
 cd src/
 python segrnn-argid.py 2> err
-
 ```
 
 #### Contact
 
 For questions and usage issues, please contact swabha@cs.cmu.edu
-
