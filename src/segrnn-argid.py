@@ -963,7 +963,12 @@ if options.mode in ['train', 'refresh']:
                     os.rename("tmp.link", MODELSYMLINK)
                 sys.stderr.write(" [took %.3f s]\n" % (time.time() - devstarttime))
                 starttime = time.time()
-        adam.update_epoch(1.0)
+        #adam.update_epoch(1.0) update_epoch is deprecated and should be
+        #replaced by the below line:
+        #adam.learning_rate /= (1 - rate_decay)
+        #however according to the paper no learning rate decay is used
+        #just commenting the line then
+
 
 elif options.mode == "ensemble":
     exfs = {x: {} for x in xrange(len(devexamples))}
