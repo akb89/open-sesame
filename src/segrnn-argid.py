@@ -31,6 +31,7 @@ optpr.add_option("--syn", type='choice', choices=['dep', 'constit', 'none'], def
 optpr.add_option("--ptb", action="store_true", default=False)
 optpr.add_option("--fefile", help="output frame element file for semafor eval", metavar="FILE",
                  default="my.test.predict.sentences.frame.elements")
+optpr.add_option('--dynet-gpu', action='store_true', default=False)
 
 (options, args) = optpr.parse_args()
 if options.exemplar:
