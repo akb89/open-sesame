@@ -17,14 +17,20 @@ INV_ARGTYPES={v:k for k,v in ARGTYPES.iteritems()}
 
 DEBUGMODE = False
 
+XP = 'xp_001'
+
 VERSION="1.5"
 DATADIR = "../data/"
 PARSERDATADIR = DATADIR + "neural/fn" + VERSION + "/"
 
-TRAIN_FTE = PARSERDATADIR + "fn" + VERSION + ".fulltext.train.conll.bios"
-TRAIN_EXEMPLAR = PARSERDATADIR + "fn" + VERSION + ".exemplar.train.conll.bios"
-DEV_CONLL   = PARSERDATADIR + "fn" + VERSION + ".dev.conll.bios"
-TEST_CONLL  = PARSERDATADIR + "fn" + VERSION + ".test.conll.bios"
+XPDIR = DATADIR + XP + '/'
+TRAIN_FTE = XPDIR + 'train.bios'
+#TRAIN_FTE = PARSERDATADIR + "fn" + VERSION + ".fulltext.train.conll.bios"
+#TRAIN_EXEMPLAR = PARSERDATADIR + "fn" + VERSION + ".exemplar.train.conll.bios"
+#DEV_CONLL   = PARSERDATADIR + "fn" + VERSION + ".dev.conll.bios"
+DEV_CONLL = XPDIR + 'dev.bios'
+#TEST_CONLL  = PARSERDATADIR + "fn" + VERSION + ".test.conll.bios"
+TEST_CONLL = XPDIR + 'test.bios'
 
 FNDATADIR = DATADIR + "fndata-" + VERSION + "/"
 LU_INDEX = FNDATADIR + "luIndex.xml"
@@ -96,6 +102,3 @@ CONSTIT_MAP = {TRAIN_FTE:TRAIN_FTE_CONSTITS, DEV_CONLL:DEV_CONSTITS, TEST_CONLL:
 # BEG = "b"
 # END = "e"
 # SINGLE = "s"
-
-
-
