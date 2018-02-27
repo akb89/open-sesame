@@ -197,7 +197,7 @@ ALL_FEATS_DIM = 2 * LSTMDIM \
 if USE_DEPS:
     DEPHEADDIM = LSTMINPDIM + POSDIM
     DEPRELDIM = 8
-    OUTHEADDIM = dy.OutHeads.size()
+    OUTHEADDIM = OutHeads.size()
 
     PATHLSTMINPDIM = DEPHEADDIM + DEPRELDIM
     PATHLSTMDIM = 64
@@ -464,7 +464,7 @@ def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_
 
             fbemb_ij_basic = dy.concatenate([fws[i][j], bws[i][j], tfemb, spanlen, logspanlen, spanwidth, spanpos])
             if USE_DEPS:
-                outs = oh_s[dy.OutHeads.getnumouts(i, j, sentence.outheads)]
+                outs = oh_s[OutHeads.getnumouts(i, j, sentence.outheads)]
                 shp = spaths_x[sentence.shortest_paths[(i, j, targetspan[0])]]
                 fbemb_ij = dy.concatenate([fbemb_ij_basic, outs, shp])
             elif USE_CONSTITS:
