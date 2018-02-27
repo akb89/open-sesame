@@ -10,15 +10,19 @@ import sys
 import time
 import math
 
-MODELSYMLINK = "model.segrnn-argid." + VERSION
-modelfname = "../models/" + VERSION + "model.sra-" + str(time.time())
+#MODELSYMLINK = "model.segrnn-argid." + VERSION
+#modelfname = "../models/" + VERSION + "model.sra-" + str(time.time())
 
 optpr = OptionParser()
-optpr.add_option("--testf", dest="test_conll", help="Annotated CoNLL test file", metavar="FILE", default=TEST_CONLL)
+#optpr.add_option("--testf", dest="test_conll", help="Annotated CoNLL test file", metavar="FILE", default=TEST_CONLL)
+optpr.add_option("--testf", dest="test_conll", help="Annotated BIOS test file", metavar="FILE")
+optpr.add_option("--trainf", dest="train_conll", help="Annotated BIOS train file", metavar="FILE")
+optpr.add_option("--devf", dest="dev_conll", help="Annotated BIOS dev file", metavar="FILE")
 optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh', 'ensemble'],
                  default='train')
 optpr.add_option("--saveensemble", action="store_true", default=True)
-optpr.add_option('--model', dest="modelfile", help="Saved model file", metavar="FILE", default=MODELSYMLINK)
+#optpr.add_option('--model', dest="modelfile", help="Saved model file", metavar="FILE", default=MODELSYMLINK)
+optpr.add_option('--model', dest="modelfile", help="Saved model file", metavar="FILE")
 optpr.add_option("--exemplar", action="store_true", default=False)
 optpr.add_option("--spanlen", type='choice', choices=['clip', 'filter'], default='clip')
 optpr.add_option('--loss', type='choice', choices=['log', 'softmaxm', 'hinge'], default='softmaxm')
@@ -26,19 +30,24 @@ optpr.add_option('--cost', type='choice', choices=['hamming', 'recall'], default
 optpr.add_option('--roc', type='int', default=2)
 optpr.add_option("--dropout", action="store_true", default=True)
 optpr.add_option("--wordvec", action="store_true", default=True)
+optpr.add_option("--vecf", dest="vector_file", help="Filtered vector file", metavar="FILE")
 optpr.add_option("--hier", action="store_true", default=False)
 optpr.add_option("--syn", type='choice', choices=['dep', 'constit', 'none'], default='none')
 optpr.add_option("--ptb", action="store_true", default=False)
 optpr.add_option("--fefile", help="output frame element file for semafor eval", metavar="FILE",
                  default="my.test.predict.sentences.frame.elements")
+optpr.add_option('--dynet-gpu', action='store_true', default=False)
 
 (options, args) = optpr.parse_args()
-if options.exemplar:
-    train_conll = TRAIN_EXEMPLAR
-    # TODO: we still don't have exemplar constituent parses
-else:
-    train_conll = TRAIN_FTE
-    train_constits = TRAIN_FTE_CONSTITS
+# if options.exemplar:
+#     train_conll = TRAIN_EXEMPLAR
+#     # TODO: we still don't have exemplar constituent parses
+# else:
+#     train_conll = TRAIN_FTE
+#     train_constits = TRAIN_FTE_CONSTITS
+
+modelfile = options.modelfile
+train_conll = options.train_conll
 
 USE_SPAN_CLIP = (options.spanlen == 'clip')
 ALLOWED_SPANLEN = 20
@@ -47,6 +56,9 @@ USE_DROPOUT = options.dropout
 DROPOUT_RATE = 0.1
 
 USE_WV = options.wordvec
+if USE_WV:
+    filtered_wvecs_filepath = options.vector_file
+
 USE_HIER = options.hier
 
 USE_DEPS = USE_CONSTITS = False
@@ -78,7 +90,8 @@ sys.stderr.write("USING C-SYNTAX? \t" + str(USE_CONSTITS) + "\n")
 sys.stderr.write("USING PTB-CLOSS?\t" + str(USE_PTB_CONSTITS) + "\n")
 
 if options.mode in ["train", "refresh"]:
-    sys.stderr.write("MODEL WILL BE SAVED TO\t%s\n" % modelfname)
+    #sys.stderr.write("MODEL WILL BE SAVED TO\t%s\n" % modelfname)
+    sys.stderr.write("MODEL WILL BE SAVED TO\t%s\n" % modelfile)
 if options.mode == "test":
     sys.stderr.write("SAVING ENSEMBLE?\t" + str(SAVE_FOR_ENSEMBLE) + "\n")
 sys.stderr.write("_____________________\n")
@@ -89,13 +102,17 @@ if USE_PTB_CONSTITS:
 trainexamples, _, _ = read_conll(train_conll, options.syn)
 post_train_lock_dicts()
 
-frmfemap, corefrmfemap, _ = read_frame_maps()
+#frmfemap, corefrmfemap, _ = read_frame_maps()
+frmfemap, corefrmfemap, _ = read_frame_maps(train_conll)
+
 # to handle FE in annotation (sigh)
-frmfemap[FRAMEDICT.getid("Measurable_attributes")].append(FEDICT.getid("Dimension"))
-frmfemap[FRAMEDICT.getid("Removing")].append(FEDICT.getid("Frequency"))
+# frmfemap[FRAMEDICT.getid("Measurable_attributes")].append(FEDICT.getid("Dimension"))
+# frmfemap[FRAMEDICT.getid("Removing")].append(FEDICT.getid("Frequency"))
+
 
 if USE_WV:
-    wvs = get_wvec_map()
+    #wvs = get_wvec_map()
+    wvs = get_wvec_map(filtered_wvecs_filepath)
     sys.stderr.write("using pretrained embeddings of dimension " + str(len(wvs.values()[0])) + "\n")
 
 if USE_HIER:
@@ -120,9 +137,9 @@ sys.stderr.write("# constituency labels:  " + str(CLABELDICT.size()) + "\n")
 trainexamples = filter_long_ex(trainexamples, USE_SPAN_CLIP, ALLOWED_SPANLEN, NOTANFEID)
 
 if options.mode in ['train', 'refresh']:
-    devexamples, _, _ = read_conll(DEV_CONLL, options.syn)
+    devexamples, _, _ = read_conll(options.dev_conll, options.syn)
     sys.stderr.write("unknowns in dev\n\n_____________________\n")
-    out_conll_file = "argid.predicted.fn" + VERSION + ".dev.conll"
+    #out_conll_file = "argid.predicted.fn" + VERSION + ".dev.conll"
 else:
     devexamples, _, _ = read_conll(options.test_conll, options.syn)
     sys.stderr.write("unknowns in test\n\n_____________________\n")
@@ -180,7 +197,7 @@ ALL_FEATS_DIM = 2 * LSTMDIM \
 if USE_DEPS:
     DEPHEADDIM = LSTMINPDIM + POSDIM
     DEPRELDIM = 8
-    OUTHEADDIM = dy.OutHeads.size()
+    OUTHEADDIM = OutHeads.size()
 
     PATHLSTMINPDIM = DEPHEADDIM + DEPRELDIM
     PATHLSTMDIM = 64
@@ -447,7 +464,7 @@ def get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_
 
             fbemb_ij_basic = dy.concatenate([fws[i][j], bws[i][j], tfemb, spanlen, logspanlen, spanwidth, spanpos])
             if USE_DEPS:
-                outs = oh_s[dy.OutHeads.getnumouts(i, j, sentence.outheads)]
+                outs = oh_s[OutHeads.getnumouts(i, j, sentence.outheads)]
                 shp = spaths_x[sentence.shortest_paths[(i, j, targetspan[0])]]
                 fbemb_ij = dy.concatenate([fbemb_ij_basic, outs, shp])
             elif USE_CONSTITS:
@@ -796,7 +813,10 @@ def identify_fes(unkdtoks, sentence, tfdict, goldfes=None, testidx=None):
     tfemb, frame = get_target_frame_embeddings(embpos_x, tfdict)
 
     fws, bws = get_span_embeddings(embpos_x)
-    valid_fes = frmfemap[frame.id] + [NOTANFEID]
+    if frame.id not in frmfemap:
+        valid_fes = [NOTANFEID]
+    else:
+        valid_fes = frmfemap[frame.id] + [NOTANFEID]
     if USE_DEPS:
         spaths_x = get_deppath_embeddings(sentence, embpos_x)
         factor_exprs = get_factor_expressions(fws, bws, tfemb, tfdict, valid_fes, sentence, spaths_x=spaths_x)
@@ -876,7 +896,7 @@ def print_eval_result(examples, expredictions):
 
 
 # main
-NUMEPOCHS = 1000
+NUMEPOCHS = 10
 LOSS_EVAL_EPOCH = 100
 DEV_EVAL_EPOCHS = 10 * LOSS_EVAL_EPOCH
 
@@ -955,12 +975,13 @@ if options.mode in ['train', 'refresh']:
 
                 if lf > bestdevf:
                     bestdevf = lf
-                    print_result(devexamples, predictions)
+                    #print_result(devexamples, predictions)
                     sys.stderr.write(" -- saving")
 
-                    model.save(modelfname)
-                    os.symlink(modelfname, "tmp.link")
-                    os.rename("tmp.link", MODELSYMLINK)
+                    #model.save(modelfname)
+                    model.save(modelfile)
+                    #os.symlink(modelfname, "tmp.link")
+                    #os.rename("tmp.link", MODELSYMLINK)
                 sys.stderr.write(" [took %.3f s]\n" % (time.time() - devstarttime))
                 starttime = time.time()
         #adam.update_epoch(1.0) update_epoch is deprecated and should be

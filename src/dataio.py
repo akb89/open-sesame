@@ -146,33 +146,100 @@ def read_fes_lus(frame_file):
 
     return frid, fes, corefes, lus
 
-def read_frame_maps():
-    sys.stderr.write("reading the frame-element - frame map from " + FRAME_DIR + "...\n")
 
+def read_frame_maps(train_bios_filepath):
+    sys.stderr.write("extracting the frame-element - frame map from " + train_bios_filepath + "...\n")
     frmfemap = {}
     corefrmfemap = {}
     lufrmmap = {}
     maxfesforframe = 0
     longestframe = None
-
-    for f in os.listdir(FRAME_DIR):
-        framef = os.path.join(FRAME_DIR, f)
-        if framef.endswith("xsl"):
-            continue
-        frm, fes, corefes, lus = read_fes_lus(framef)
-        frmfemap[frm] = fes
-        corefrmfemap[frm] = corefes
-        if len(frmfemap[frm]) > maxfesforframe:
-            maxfesforframe = len(frmfemap[frm])
-            longestframe = frm
-        for l in lus:
-            if l not in lufrmmap:
-                lufrmmap[l] = []
-            lufrmmap[l].append(frm)
-
+    with open(train_bios_filepath, 'r') as train_bios_stream:
+        frid = -1
+        luid = -1
+        fe_names_and_coretypes = []
+        for line in train_bios_stream:
+            line = line.strip()
+            if line == '':
+                if frid == -1:
+                    raise Exception('Invalid frame id')
+                if luid == -1:
+                    raise Exception('Invalid lu id')
+                if luid not in lufrmmap:
+                    lufrmmap[luid] = [frid]
+                else:
+                    if frid not in lufrmmap[luid]:
+                        lufrmmap[luid].append(frid)
+                if fe_names_and_coretypes:
+                    for fe_name, fe_coretype in fe_names_and_coretypes:
+                        feid = FEDICT.addstr(fe_name)
+                        if frid not in frmfemap:
+                            frmfemap[frid] = [feid]
+                        else:
+                            if feid not in frmfemap[frid]:
+                                frmfemap[frid].append(feid)
+                        if fe_coretype == 'Core':
+                            if frid not in corefrmfemap:
+                                corefrmfemap[frid] = [feid]
+                            else:
+                                if feid not in corefrmfemap[frid]:
+                                    corefrmfemap[frid].append(feid)
+                    if len(frmfemap[frid]) > maxfesforframe:
+                        maxfesforframe = len(frmfemap[frid])
+                        longestframe = frid
+                fe_names_and_coretypes = []
+                frid = -1
+                luid = -1
+            else:
+                line_splits = line.split('\t')
+                if line_splits[13] != '_':
+                    frid = FRAMEDICT.addstr(line_splits[13])
+                fe_name = line_splits[14]
+                fe_coretype = line_splits[15]
+                if fe_name != 'O' and fe_coretype != '_':
+                    fe_names_and_coretypes.append((fe_name[2:], fe_coretype))
+                if line_splits[12] != '_':
+                    lu_fields = line_splits[12].split(".")
+                    luid = LUDICT.addstr(lu_fields[0])
+                    LUPOSDICT.addstr(lu_fields[1])
     sys.stderr.write("# max FEs for frame: "  + str(maxfesforframe)
                      + " in Frame(" +FRAMEDICT.getstr(longestframe) + ")\n\n")
+    # for key, value in frmfemap.iteritems():
+    #     print(key, value)
+    # for key, value in corefrmfemap.iteritems():
+    #     print(key, value)
+    # for key, value in lufrmmap.iteritems():
+    #     print(key, value)
     return frmfemap, corefrmfemap, lufrmmap
+
+
+# def _read_frame_maps():
+#     sys.stderr.write("reading the frame-element - frame map from " + FRAME_DIR + "...\n")
+#
+#     frmfemap = {}
+#     corefrmfemap = {}
+#     lufrmmap = {}
+#     maxfesforframe = 0
+#     longestframe = None
+#
+#     for f in os.listdir(FRAME_DIR):
+#         framef = os.path.join(FRAME_DIR, f)
+#         if framef.endswith("xsl"):
+#             continue
+#         frm, fes, corefes, lus = read_fes_lus(framef)
+#         frmfemap[frm] = fes
+#         corefrmfemap[frm] = corefes
+#         if len(frmfemap[frm]) > maxfesforframe:
+#             maxfesforframe = len(frmfemap[frm])
+#             longestframe = frm
+#         for l in lus:
+#             if l not in lufrmmap:
+#                 lufrmmap[l] = []
+#             lufrmmap[l].append(frm)
+#
+#     sys.stderr.write("# max FEs for frame: "  + str(maxfesforframe)
+#                      + " in Frame(" +FRAMEDICT.getstr(longestframe) + ")\n\n")
+#     return frmfemap, corefrmfemap, lufrmmap
 
 def read_related_lus():
     sys.stderr.write("reading the frame-element - frame map from " + FRAME_DIR + "...\n")
@@ -237,20 +304,32 @@ def read_related_lus():
 
     return lufrmmap, related_lus
 
-def get_wvec_map():
-    if not os.path.exists(FILTERED_WVECS_FILE):
-        raise Exception("word vector file not found!", FILTERED_WVECS_FILE)
-    sys.stderr.write("reading the word vectors file from " + FILTERED_WVECS_FILE + "...\n")
-    wvf = open(FILTERED_WVECS_FILE,'r')
+# def get_wvec_map():
+#     if not os.path.exists(FILTERED_WVECS_FILE):
+#         raise Exception("word vector file not found!", FILTERED_WVECS_FILE)
+#     sys.stderr.write("reading the word vectors file from " + FILTERED_WVECS_FILE + "...\n")
+#     wvf = open(FILTERED_WVECS_FILE,'r')
+#     wvf.readline()
+#     wd_vecs = {VOCDICT.addstr(line.split(' ')[0]) : [float(f) for f in line.strip().split(' ')[1:]] for line in wvf}
+#     return wd_vecs
+
+
+def get_wvec_map(filtered_wvecs_filepath):
+    if not os.path.exists(filtered_wvecs_filepath):
+        raise Exception("word vector file not found!", filtered_wvecs_filepath)
+    sys.stderr.write("reading the word vectors file from " + filtered_wvecs_filepath + "...\n")
+    wvf = open(filtered_wvecs_filepath,'r')
     wvf.readline()
     wd_vecs = {VOCDICT.addstr(line.split(' ')[0]) : [float(f) for f in line.strip().split(' ')[1:]] for line in wvf}
     return wd_vecs
+
 
 def get_chains(node, inherit_map, path):
     if node in inherit_map:
         for par in inherit_map[node]:
             path = get_chains(par, inherit_map, path+[par])
     return path
+
 
 def read_frame_relations():
     sys.stderr.write("reading inheritance relationships from " + FRAME_REL_FILE + "...\n")
@@ -350,4 +429,3 @@ def read_ptb():
         sys.stderr.write("# PTB sentences: %d\n" %len(sentences))
         ptbsf.close()
     return sentences
-

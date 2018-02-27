@@ -48,6 +48,7 @@ class CoNLL09Element:
         else:
             self.role = FEDICT.addstr(ele[14])
 
+
     def get_str(self, rolelabel=None):
         idstr = str(self.id) + "\t"
         form = VOCDICT.getstr(self.form) + "\t"
