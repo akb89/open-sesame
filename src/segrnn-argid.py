@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import math
+import pickle
 
 #MODELSYMLINK = "model.segrnn-argid." + VERSION
 #modelfname = "../models/" + VERSION + "model.sra-" + str(time.time())
@@ -20,7 +21,7 @@ optpr.add_option("--trainf", dest="train_conll", help="Annotated BIOS train file
 optpr.add_option("--devf", dest="dev_conll", help="Annotated BIOS dev file", metavar="FILE")
 optpr.add_option("--mode", dest="mode", type='choice', choices=['train', 'test', 'refresh', 'ensemble'],
                  default='train')
-optpr.add_option("--saveensemble", action="store_true", default=True)
+optpr.add_option("--saveensemble", action="store_true", default=False)
 #optpr.add_option('--model', dest="modelfile", help="Saved model file", metavar="FILE", default=MODELSYMLINK)
 optpr.add_option('--model', dest="modelfile", help="Saved model file", metavar="FILE")
 optpr.add_option("--exemplar", action="store_true", default=False)
@@ -99,11 +100,12 @@ sys.stderr.write("_____________________\n")
 if USE_PTB_CONSTITS:
     ptbexamples = read_ptb()
 
-trainexamples, _, _ = read_conll(train_conll, options.syn)
+
+trainexamples, _, _ = read_conll(options.train_conll, options.syn)
 post_train_lock_dicts()
+frmfemap, corefrmfemap, _ = read_frame_maps(options.train_conll)
 
 #frmfemap, corefrmfemap, _ = read_frame_maps()
-frmfemap, corefrmfemap, _ = read_frame_maps(train_conll)
 
 # to handle FE in annotation (sigh)
 # frmfemap[FRAMEDICT.getid("Measurable_attributes")].append(FEDICT.getid("Dimension"))
@@ -143,7 +145,8 @@ if options.mode in ['train', 'refresh']:
 else:
     devexamples, _, _ = read_conll(options.test_conll, options.syn)
     sys.stderr.write("unknowns in test\n\n_____________________\n")
-    out_conll_file = "argid.predicted." + options.test_conll.split("/")[-1]
+    #out_conll_file = "argid.predicted." + options.test_conll.split("/")[-1]
+    out_conll_file = '{}.decoded'.format(options.test_conll)
     if SAVE_FOR_ENSEMBLE:
         out_ens_file = "ensemble." + out_conll_file[:-11]
     if options.mode == "ensemble":
@@ -1020,9 +1023,9 @@ elif options.mode == "ensemble":
     print_result(devexamples, testpredictions)
     sys.stderr.write("done!\n")
     print_eval_result(devexamples, testpredictions)
-    sys.stderr.write("printing frame-elements to " + options.fefile + " ...\n")
-    convert_conll_to_frame_elements(out_conll_file, options.fefile)
-    sys.stderr.write("done!\n")
+    #sys.stderr.write("printing frame-elements to " + options.fefile + " ...\n")
+    #convert_conll_to_frame_elements(out_conll_file, options.fefile)
+    #sys.stderr.write("done!\n")
 
 elif options.mode == "test":
     if SAVE_FOR_ENSEMBLE:
@@ -1046,7 +1049,7 @@ elif options.mode == "test":
     sys.stderr.write("printing output conll to " + out_conll_file + " ... ")
     print_result(devexamples, testpredictions)
     sys.stderr.write("done!\n")
-    print_eval_result(devexamples, testpredictions)
-    sys.stderr.write("printing frame-elements to " + options.fefile + " ...\n")
-    convert_conll_to_frame_elements(out_conll_file, options.fefile)
-    sys.stderr.write("done!\n")
+    #print_eval_result(devexamples, testpredictions)
+    # sys.stderr.write("printing frame-elements to " + options.fefile + " ...\n")
+    # convert_conll_to_frame_elements(out_conll_file, options.fefile)
+    # sys.stderr.write("done!\n")
