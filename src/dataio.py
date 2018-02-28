@@ -204,16 +204,10 @@ def read_frame_maps(train_bios_filepath):
                     LUPOSDICT.addstr(lu_fields[1])
     sys.stderr.write("# max FEs for frame: "  + str(maxfesforframe)
                      + " in Frame(" +FRAMEDICT.getstr(longestframe) + ")\n\n")
-    # for key, value in frmfemap.iteritems():
-    #     print(key, value)
-    # for key, value in corefrmfemap.iteritems():
-    #     print(key, value)
-    # for key, value in lufrmmap.iteritems():
-    #     print(key, value)
     return frmfemap, corefrmfemap, lufrmmap
 
 
-# def _read_frame_maps():
+# def read_frame_maps():
 #     sys.stderr.write("reading the frame-element - frame map from " + FRAME_DIR + "...\n")
 #
 #     frmfemap = {}
