@@ -48,6 +48,8 @@ class Sentence(object):
         path = [par]
         while par != self.root:
             par = self.depheads[par]
+            if par == self.depheads[par]:
+                return path  # BUGFIX for multiple ROOT with MSTParser
             path.append(par)
         return path
 
