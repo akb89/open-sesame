@@ -105,12 +105,6 @@ trainexamples, _, _ = read_conll(options.train_conll, options.syn)
 post_train_lock_dicts()
 frmfemap, corefrmfemap, _ = read_frame_maps(options.train_conll)
 
-#frmfemap, corefrmfemap, _ = read_frame_maps()
-
-# to handle FE in annotation (sigh)
-# frmfemap[FRAMEDICT.getid("Measurable_attributes")].append(FEDICT.getid("Dimension"))
-# frmfemap[FRAMEDICT.getid("Removing")].append(FEDICT.getid("Frequency"))
-
 
 if USE_WV:
     #wvs = get_wvec_map()
